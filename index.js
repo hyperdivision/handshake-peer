@@ -63,8 +63,9 @@ class SpakePeerServer extends Duplex {
 
     function ondata (data) {
       const plaintext = self.decrypter.decrypt(data)
+      self.push(plaintext)
 
-      if (self.decrypter.decrypt.tag === secretstream.TAG_FINAL) {
+      if (self.decrypter.decrypt.tag.equals(secretstream.TAG_FINAL)) {
         self.push(null)
       }
     }
@@ -151,7 +152,7 @@ class SpakePeerClient extends Duplex {
       const plaintext = self.decrypter.decrypt(data)
       self.push(plaintext)
 
-      if (self.decrypter.decrypt.tag === secretstream.TAG_FINAL) {
+      if (self.decrypter.decrypt.tag.equals(secretstream.TAG_FINAL)) {
         self.push(null)
       }
     }

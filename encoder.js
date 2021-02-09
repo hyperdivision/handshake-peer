@@ -23,7 +23,6 @@ class Decode extends Transform {
   }
 
   _transform (data, cb) {
-    console.log(data)
     while (data.byteLength > 0) {
       if (this._buffered) {
         data = Buffer.concat([this._buffered, data])

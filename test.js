@@ -16,5 +16,7 @@ const serverRes = new Transform()
 const server = new SpakePeer.Server(serverId, username, registrationInfo, serverReq, serverRes)
 const client = new SpakePeer.Client(username, password, serverId, serverRes, serverReq)
 
+server.on('data', d => console.log('data', d.toString()))
+server.on('end', () => console.log('stream closed'))
 client.write('hello')
-server.on('data', d => console.log('data', d))
+client.end()
