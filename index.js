@@ -1,5 +1,5 @@
 const Spake = require('spake2-ee')
-const Secretstream = require('secretstream-stream/stream')
+const secretstream = require('secretstream-stream')
 const { Duplex } = require('streamx')
 const { Encode, Decode } = require('./encoder')
 
@@ -10,12 +10,16 @@ class SpakePeerServer extends Duplex {
     this.send = new Encode()
     this.clientId = username
     this.clientData = clientData
+    
+    this.keys = null
+    this.encrypter = null
+    this.decrypter = null
 
     req.pipe(this.read)
     this.send.pipe(res)
   }
 
-  get (cb) {
+  _open (cb) {
     const self = this
 
     const state = new Spake.ServerSide(this.id, this.clientData)
@@ -38,21 +42,20 @@ class SpakePeerServer extends Duplex {
       info = self.read.read()
       self.read.removeListener('data', onfinal)
 
-      const sharedKeys = state.finalise(info)
+      self.keys = state.finalise(info)
 
-      const send = new Secretstream.Push(Buffer.from(sharedKeys.serverSk))
-      const recv = new Secretstream.Pull(Buffer.from(sharedKeys.clientSk))
+      const header = Buffer.alloc(secretstream.HEADERBYTES)
+      self.encrypter = secretstream.encrypt(header, self.keys.serverSk)
 
-      send.pipe(self.send)
-      self.read.on('data', onheader)
+      self.read.on('readable', onheader)
+    }
 
-      function onheader (header) {
-        console.log('server', header)
-        self.read.removeListener('data', onheader)
-        self.read.on('data', d => recv.push(d))
+    function onheader (header) {
+      info = self.read.read()
+      self.read.removeListener('data', onheader)
 
-        cb(null, { send, recv })    
-      }
+      self.decrypter = secretstream.encrypt(info, self.keys.clientSk)
+      self.read.on('data', d => recv.push(d))
     }
 
     function onerror (err) {
@@ -78,11 +81,15 @@ class SpakePeerClient extends Duplex {
     this.pwd = pwd
     this.serverId = serverId
 
+    this.keys = null
+    this.encrypter = null
+    this.decrypter = null
+
     req.pipe(this.read)
     this.send.pipe(res)
   }
 
-  connect (cb) {
+  _open (cb) {
     const self = this
 
     const state = new Spake.ClientSide(this.username)
@@ -104,26 +111,23 @@ class SpakePeerClient extends Duplex {
       info = self.read.read()
       self.read.removeListener('readable', onresponse)
 
-      const sharedKeys = new Spake.SpakeSharedKeys
+      self.keys = new Spake.SpakeSharedKeys
 
       const response = state.finalise(sharedKeys, self.serverId, info)
+
+      const header = Buffer.alloc(secretstream.HEADERBYTES)
+      self.encrypter = secretstream.encrypt(header, self.keys.clientSk)
+
       self.send.push(response)
+      self.read.on('readable', onheader)
+    }
 
-      const send = new Secretstream.Push(Buffer.from(sharedKeys.clientSk))
-      const recv = new Secretstream.Pull(Buffer.from(sharedKeys.serverSk))
+    function onheader (header) {
+      info = self.read.read()
+      self.read.removeListener('data', onheader)
 
-      console.log('header')
-
-      send.on('data', d => self.send.push(d))
-      self.read.on('data', onheader)
-
-      function onheader (header) {
-        console.log('header')
-        self.read.removeListener('data', onheader)
-        self.read.on('data', d => recv.push(d))
-
-        cb(null, { send, recv })    
-      }
+      self.decrypter = secretstream.encrypt(info, self.keys.serverSk)
+      self.read.on('data', d => recv.push(d))
     }
 
     function onerror (err) {
