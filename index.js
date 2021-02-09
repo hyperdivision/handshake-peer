@@ -42,8 +42,6 @@ class SpakePeerServer extends Duplex {
     function onfinal (info) {
       self.read.pause()
 
-      console.log(info)
-
       self.keys = state.finalise(info)
 
       const header = Buffer.alloc(secretstream.HEADERBYTES)
@@ -57,10 +55,20 @@ class SpakePeerServer extends Duplex {
       self.read.pause()
 
       self.decrypter = secretstream.decrypt(info, Buffer.from(self.keys.clientSk))
-      self.read.on('data', d => self.push(d))
+      self.read.on('data', ondata)
       self.read.resume()
 
       cb()
+    }
+
+    function ondata (data) {
+      const plaintext = self.decrypter.decrypt(data)
+      self.push(plaintext)
+
+      if (self.decrypter.decrypt.tag === secretstream.TAG_FINAL) {
+        self.send.push(null)
+        self.push(null)
+      }
     }
 
     function onerror (err) {
@@ -102,11 +110,8 @@ class SpakePeerClient extends Duplex {
 
     self.read.once('data', onpublicdata)
 
-    function onpublicdata () {
-      const info = self.read.read()
-      if (!info) return
-
-      self.read.removeListener('readable', onpublicdata)
+    function onpublicdata (info) {
+      self.read.pause()
 
       const response = state.generate(info, self.pwd)
 
@@ -131,10 +136,20 @@ class SpakePeerClient extends Duplex {
       self.read.pause()
 
       self.decrypter = secretstream.decrypt(info, Buffer.from(self.keys.serverSk))
-      self.read.on('data', d => self.push(d))
+      self.read.on('data', ondata)
       self.read.resume()
 
       cb()
+    }
+
+    function ondata (data) {
+      const plaintext = self.decrypter.decrypt(data)
+      self.push(plaintext)
+
+      if (self.decrypter.decrypt.tag === secretstream.TAG_FINAL) {
+        self.send.push(null)
+        self.push(null)
+      }
     }
 
     function onerror (err) {
@@ -144,7 +159,6 @@ class SpakePeerClient extends Duplex {
 
   _write (data, cb) {
     const ciphertext = this.encrypter.encrypt(secretstream.TAG_MESSAGE, Buffer.from(data))
-    console.log(ciphertext)
     this.send.write(ciphertext)
 
     cb()
