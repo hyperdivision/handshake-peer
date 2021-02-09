@@ -10,15 +10,15 @@ const password = Buffer.from('password')
 
 const registrationInfo = spake.ClientSide.register(password)
 
-const req = new Transform()
-const res = new Transform()
+const serverReq = new Transform()
+const serverRes = new Transform()
 
-const server = new SpakePeer.Server(serverId, storage, req, res)
+const server = new SpakePeer.Server(serverId, storage, serverReq, serverRes)
 server.register(username, registrationInfo)
 
-const client = new SpakePeer.Client(username, res, req)
+const client = new SpakePeer.Client(username, serverRes, serverReq)
 
-client.connect(password, (err, transport) => {
+client.connect(password, serverId, (err, transport) => {
   console.log('client connected!')
   transport.recv.on('data',  d => console.log('client received:', d.toString()))
 

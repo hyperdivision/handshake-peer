@@ -29,9 +29,9 @@ class SpakePeerServer {
       console.log(info)
       self.read.removeListener('readable', onresponse)
 
-      const response = state.respond(username, info.data)
+      const response = state.respond(username, info)
 
-      self.send.write(self.frameMsg(response))
+      self.send.write(response)
       self.read.on('readable', onfinal)
     }
 
@@ -40,15 +40,13 @@ class SpakePeerServer {
       console.log(info)
       self.read.removeListener('data', onfinal)
 
-      const sharedKeys = state.finalise(info.data)
+      const sharedKeys = state.finalise(info)
 
       const send = new Secretstream.Push(Buffer.from(sharedKeys.serverSk))
       const recv = new Secretstream.Pull(Buffer.from(sharedKeys.clientSk))
 
       send.pipe(self.send)
       self.read.on('data', onheader)
-
-      // cb(null, { send, recv })
 
       function onheader (header) {
         console.log('server', header)
@@ -83,7 +81,7 @@ class SpakePeerClient {
     this.send.pipe(res)
   }
 
-  connect (pwd, cb) {
+  connect (pwd, serverId, cb) {
     const self = this
 
     const state = new Spake.ClientSide(this.username)
@@ -92,11 +90,12 @@ class SpakePeerClient {
 
     function onpublicdata (info) {
       info = self.read.read()
+      console.log(info)
       self.read.removeListener('readable', onpublicdata)
 
-      const response = state.generate(info.data, pwd)
+      const response = state.generate(info, pwd)
 
-      self.send.write(self.frameMsg(response))
+      self.send.write(response)
       self.read.on('readable', onresponse)
     }
 
@@ -106,8 +105,8 @@ class SpakePeerClient {
 
       const sharedKeys = new Spake.SpakeSharedKeys
 
-      const response = state.finalise(sharedKeys, info.serverId, info.data)
-      self.send.push(self.frameMsg(response))
+      const response = state.finalise(sharedKeys, serverId, info)
+      self.send.push(response)
 
       const send = new Secretstream.Push(Buffer.from(sharedKeys.clientSk))
       const recv = new Secretstream.Pull(Buffer.from(sharedKeys.serverSk))
