@@ -6,9 +6,10 @@ class Encode extends Transform {
   }
 
   _transform (data, cb) {
+    console.log('data', data)
     const frame = Buffer.alloc(2)
     const view = new DataView(frame.buffer)
-    view.setUint16(data.length, 0, true)
+    view.setUint16(0, data.length, true)
     cb(null, Buffer.concat([frame, data]))
   }
 }
