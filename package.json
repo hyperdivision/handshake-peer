@@ -1,0 +1,15 @@
+{
+  "name": "spake2-peer",
+  "version": "0.0.0",
+  "description": "Connect to a peer using SPAKE2-EE key agreement protocol",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test.js"
+  },
+  "author": "Christophe Diederichs",
+  "license": "ISC",
+  "dependencies": {
+    "secretstream-stream": "^2.0.0",
+    "spake2-ee": "0.0.0"
+  }
+}
