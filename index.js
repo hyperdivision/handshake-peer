@@ -101,7 +101,6 @@ class SpakePeerClient extends Duplex {
 
     function onpublicdata () {
       const info = self.read.read()
-      console.log(info)
       self.read.removeListener('readable', onpublicdata)
 
       const response = state.generate(info, self.pwd)
@@ -117,7 +116,6 @@ class SpakePeerClient extends Duplex {
       const response = state.finalise(self.keys, self.serverId, info)
 
       const header = Buffer.alloc(secretstream.HEADERBYTES)
-      console.log(self.keys)
       self.encrypter = secretstream.encrypt(header, Buffer.from(self.keys.clientSk))
 
       self.send.push(response)
