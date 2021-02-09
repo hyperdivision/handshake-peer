@@ -5,6 +5,8 @@ const { Encode, Decode } = require('./encoder')
 
 class SpakePeerServer extends Duplex {
   constructor (id, username, clientData, req, res, opts = {}) {
+    super()
+
     this.id = id
     this.read = new Decode()
     this.send = new Encode()
@@ -74,6 +76,8 @@ class SpakePeerServer extends Duplex {
 
 class SpakePeerClient extends Duplex {
   constructor (username, pwd, serverId, req, res, opts = {}) {
+    super()
+
     this.username = username
     this.read = new Decode()
     this.send = new Encode()
