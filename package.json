@@ -9,7 +9,10 @@
   "author": "Christophe Diederichs",
   "license": "ISC",
   "dependencies": {
+    "nanoassert": "^2.0.0",
+    "pump": "^3.0.0",
     "secretstream-stream": "^2.0.0",
-    "spake2-ee": "0.0.0"
+    "spake2-ee": "0.0.0",
+    "streamx": "^2.10.1"
   }
 }

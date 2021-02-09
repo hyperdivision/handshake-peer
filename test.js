@@ -1,5 +1,5 @@
-const SpakePeer = require('./')
-const spake = require('spake2-ee')
+const HandshakePeer = require('./')
+const Spake = require('spake2-ee')
 const { Transform, Readable } = require('streamx')
 
 const storage = new Map()
@@ -8,15 +8,37 @@ const serverId = Buffer.from('server1')
 const username = Buffer.from('anon')
 const password = Buffer.from('password')
 
-const registrationInfo = spake.ClientSide.register(password)
+const clientInfo = {
+  username,
+  data: Spake.ClientSide.register(password)
+}
 
 const serverReq = new Transform()
-const serverRes = new Transform()
+const clientReq = new Transform()
 
-const server = new SpakePeer.Server(serverId, username, registrationInfo, serverReq, serverRes)
-const client = new SpakePeer.Client(username, password, serverId, serverRes, serverReq)
+const clientTransport = {
+  req: clientReq,
+  res: serverReq
+}
 
-server.on('data', d => console.log('data', d.toString()))
+const serverTransport = {
+  res: clientReq,
+  req: serverReq
+}
+
+const server = new HandshakePeer({ id: serverId }, clientInfo, serverTransport, {
+  handshake: HandshakePeer.Spake.Server
+})
+
+const client = new HandshakePeer({ username, password }, { serverId }, clientTransport, {
+  handshake: HandshakePeer.Spake.Client
+})
+
+server.on('data', d => console.log('server received:', d.toString()))
+client.on('data', d => console.log('client received:', d.toString()))
+
 server.on('end', () => console.log('stream closed'))
-client.write('hello')
+
+server.write('hello, client.')
+client.write('hello, server.')
 client.end()
