@@ -30,8 +30,8 @@ class SpakePeerServer extends Duplex {
     this.send.write(publicData)
     this.read.on('readable', onresponse)
 
-    function onresponse (info) {
-      info = self.read.read()
+    function onresponse () {
+      const info = self.read.read()
       self.read.removeListener('readable', onresponse)
 
       const response = state.respond(self.clientId, info)
@@ -40,8 +40,8 @@ class SpakePeerServer extends Duplex {
       self.read.on('readable', onfinal)
     }
 
-    function onfinal (info) {
-      info = self.read.read()
+    function onfinal () {
+      const info = self.read.read()
       self.read.removeListener('data', onfinal)
 
       self.keys = state.finalise(info)
@@ -52,12 +52,12 @@ class SpakePeerServer extends Duplex {
       self.read.on('readable', onheader)
     }
 
-    function onheader (header) {
-      info = self.read.read()
+    function onheader () {
+      const info = self.read.read()
       self.read.removeListener('data', onheader)
 
       self.decrypter = secretstream.encrypt(info, self.keys.clientSk)
-      self.read.on('data', d => recv.push(d))
+      self.read.on('data', d => self.push(d))
     }
 
     function onerror (err) {
@@ -100,8 +100,8 @@ class SpakePeerClient extends Duplex {
 
     self.read.on('readable', onpublicdata)
 
-    function onpublicdata (info) {
-      info = self.read.read()
+    function onpublicdata () {
+      const info = self.read.read()
       console.log(info)
       self.read.removeListener('readable', onpublicdata)
 
@@ -111,8 +111,8 @@ class SpakePeerClient extends Duplex {
       self.read.on('readable', onresponse)
     }
 
-    function onresponse (info) {
-      info = self.read.read()
+    function onresponse () {
+      const info = self.read.read()
       self.read.removeListener('readable', onresponse)
 
       self.keys = new Spake.SpakeSharedKeys
@@ -126,12 +126,12 @@ class SpakePeerClient extends Duplex {
       self.read.on('readable', onheader)
     }
 
-    function onheader (header) {
-      info = self.read.read()
+    function onheader () {
+      const info = self.read.read()
       self.read.removeListener('data', onheader)
 
       self.decrypter = secretstream.encrypt(info, self.keys.serverSk)
-      self.read.on('data', d => recv.push(d))
+      self.read.on('data', d => self.push(d))
     }
 
     function onerror (err) {
