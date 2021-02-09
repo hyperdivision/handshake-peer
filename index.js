@@ -5,7 +5,7 @@ const pump = require('pump')
 
 const { Encode, Decode } = require('./encoder')
 
-module.exports = class SpakePeer extends Duplex {
+module.exports = class HandshakePeer extends Duplex {
   constructor (localInfo, remoteInfo, transport, opts = {}) {
     super()
 
@@ -20,7 +20,7 @@ module.exports = class SpakePeer extends Duplex {
     this.decrypter = null
 
     this.handshake = opts.handshake
-    this.hadnshakeState = null
+    this.handshakeState = null
 
     pump(transport.req, this.read)
     pump(this.send, transport.res)
@@ -143,5 +143,3 @@ class Keys {
     return this._local == null || this._remote == null
   }
 }
-
-module.exports.Spake = require('./spake')

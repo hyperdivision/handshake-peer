@@ -1,8 +1,7 @@
-const HandshakePeer = require('./')
+const { SpakePeerServer, SpakePeerClient } = require('./spake')
 const Spake = require('spake2-ee')
-const { Transform, Readable } = require('streamx')
+const { Transform } = require('streamx')
 
-const storage = new Map()
 const serverId = Buffer.from('server1')
 
 const username = Buffer.from('anon')
@@ -26,13 +25,8 @@ const serverTransport = {
   req: serverReq
 }
 
-const server = new HandshakePeer({ id: serverId }, clientInfo, serverTransport, {
-  handshake: HandshakePeer.Spake.Server
-})
-
-const client = new HandshakePeer({ username, password }, { serverId }, clientTransport, {
-  handshake: HandshakePeer.Spake.Client
-})
+const server = new SpakePeerServer({ id: serverId }, clientInfo, serverTransport)
+const client = new SpakePeerClient({ username, password }, { serverId }, clientTransport)
 
 server.on('data', d => console.log('server received:', d.toString()))
 client.on('data', d => console.log('client received:', d.toString()))
