@@ -1,24 +1,24 @@
 const Spake = require('spake2-ee')
 const Secretstream = require('secretstream-stream/stream')
+const { Duplex } = require('streamx')
 const { Encode, Decode } = require('./encoder')
 
-class SpakePeerServer {
-  constructor (id, storage, req, res, opts = {}) {
-    this.clients = storage
+class SpakePeerServer extends Duplex {
+  constructor (id, username, clientData, req, res, opts = {}) {
     this.id = id
     this.read = new Decode()
     this.send = new Encode()
+    this.clientId = username
+    this.clientData = clientData
 
     req.pipe(this.read)
     this.send.pipe(res)
   }
 
-  get (username, cb) {
+  get (cb) {
     const self = this
 
-    const clientData = this.clients.get(username)
-    const state = new Spake.ServerSide(this.id, clientData)
-
+    const state = new Spake.ServerSide(this.id, this.clientData)
     const publicData = state.init()
 
     this.send.write(publicData)
@@ -26,10 +26,9 @@ class SpakePeerServer {
 
     function onresponse (info) {
       info = self.read.read()
-      console.log(info)
       self.read.removeListener('readable', onresponse)
 
-      const response = state.respond(username, info)
+      const response = state.respond(self.clientId, info)
 
       self.send.write(response)
       self.read.on('readable', onfinal)
@@ -37,7 +36,6 @@ class SpakePeerServer {
 
     function onfinal (info) {
       info = self.read.read()
-      console.log(info)
       self.read.removeListener('data', onfinal)
 
       const sharedKeys = state.finalise(info)
@@ -71,17 +69,20 @@ class SpakePeerServer {
   }
 }
 
-class SpakePeerClient {
-  constructor (username, req, res, opts = {}) {
+class SpakePeerClient extends Duplex {
+  constructor (username, pwd, serverId, req, res, opts = {}) {
     this.username = username
     this.read = new Decode()
     this.send = new Encode()
+
+    this.pwd = pwd
+    this.serverId = serverId
 
     req.pipe(this.read)
     this.send.pipe(res)
   }
 
-  connect (pwd, serverId, cb) {
+  connect (cb) {
     const self = this
 
     const state = new Spake.ClientSide(this.username)
@@ -93,7 +94,7 @@ class SpakePeerClient {
       console.log(info)
       self.read.removeListener('readable', onpublicdata)
 
-      const response = state.generate(info, pwd)
+      const response = state.generate(info, self.pwd)
 
       self.send.write(response)
       self.read.on('readable', onresponse)
@@ -105,17 +106,19 @@ class SpakePeerClient {
 
       const sharedKeys = new Spake.SpakeSharedKeys
 
-      const response = state.finalise(sharedKeys, serverId, info)
+      const response = state.finalise(sharedKeys, self.serverId, info)
       self.send.push(response)
 
       const send = new Secretstream.Push(Buffer.from(sharedKeys.clientSk))
       const recv = new Secretstream.Pull(Buffer.from(sharedKeys.serverSk))
 
+      console.log('header')
+
       send.on('data', d => self.send.push(d))
       self.read.on('data', onheader)
 
       function onheader (header) {
-        console.log(header)
+        console.log('header')
         self.read.removeListener('data', onheader)
         self.read.on('data', d => recv.push(d))
 
