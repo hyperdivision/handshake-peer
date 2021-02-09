@@ -28,21 +28,21 @@ class SpakePeerServer extends Duplex {
     const publicData = state.init()
 
     this.send.write(publicData)
-    this.read.on('readable', onresponse)
+    this.read.once('data', onresponse)
 
-    function onresponse () {
-      const info = self.read.read()
-      self.read.removeListener('readable', onresponse)
+    function onresponse (info) {
+      self.read.pause()
 
       const response = state.respond(self.clientId, info)
 
       self.send.write(response)
-      self.read.on('readable', onfinal)
+      self.read.once('data', onfinal)
     }
 
-    function onfinal () {
-      const info = self.read.read()
-      self.read.removeListener('data', onfinal)
+    function onfinal (info) {
+      self.read.pause()
+
+      console.log(info)
 
       self.keys = state.finalise(info)
 
@@ -50,15 +50,15 @@ class SpakePeerServer extends Duplex {
       self.encrypter = secretstream.encrypt(header, Buffer.from(self.keys.serverSk))
 
       self.send.write(header)
-      self.read.on('readable', onheader)
+      self.read.once('data', onheader)
     }
 
-    function onheader () {
-      const info = self.read.read()
-      self.read.removeListener('data', onheader)
+    function onheader (info) {
+      self.read.pause()
 
       self.decrypter = secretstream.decrypt(info, Buffer.from(self.keys.clientSk))
       self.read.on('data', d => self.push(d))
+      self.read.resume()
 
       cb()
     }
@@ -100,21 +100,22 @@ class SpakePeerClient extends Duplex {
 
     const state = new Spake.ClientSide(this.username)
 
-    self.read.on('readable', onpublicdata)
+    self.read.once('data', onpublicdata)
 
     function onpublicdata () {
       const info = self.read.read()
+      if (!info) return
+
       self.read.removeListener('readable', onpublicdata)
 
       const response = state.generate(info, self.pwd)
 
       self.send.write(response)
-      self.read.on('readable', onresponse)
+      self.read.once('data', onresponse)
     }
 
-    function onresponse () {
-      const info = self.read.read()
-      self.read.removeListener('readable', onresponse)
+    function onresponse (info) {
+      self.read.pause()
 
       const response = state.finalise(self.keys, self.serverId, info)
 
@@ -123,15 +124,15 @@ class SpakePeerClient extends Duplex {
 
       self.send.write(response)
       self.send.write(header)
-      self.read.on('readable', onheader)
+      self.read.once('data', onheader)
     }
 
-    function onheader () {
-      const info = self.read.read()
-      self.read.removeListener('data', onheader)
+    function onheader (info) {
+      self.read.pause()
 
       self.decrypter = secretstream.decrypt(info, Buffer.from(self.keys.serverSk))
       self.read.on('data', d => self.push(d))
+      self.read.resume()
 
       cb()
     }
@@ -143,6 +144,7 @@ class SpakePeerClient extends Duplex {
 
   _write (data, cb) {
     const ciphertext = this.encrypter.encrypt(secretstream.TAG_MESSAGE, Buffer.from(data))
+    console.log(ciphertext)
     this.send.write(ciphertext)
 
     cb()
