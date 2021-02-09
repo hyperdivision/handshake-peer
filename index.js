@@ -19,8 +19,7 @@ class SpakePeerServer {
     req.on('readable', onresponse)
 
     function onresponse (info) {
-      info = res.read()
-      console.log(info)
+      info = req.read()
       if (info.method !== 'SPAKE2EE') return
       req.removeListener('readable', onresponse)
 
@@ -31,7 +30,7 @@ class SpakePeerServer {
     }
 
     function onfinal (info) {
-      info = res.read()
+      info = req.read()
       if (info.method !== 'SPAKE2EE') return
       req.removeListener('data', onfinal)
 
@@ -88,7 +87,7 @@ class SpakePeerClient {
     function onpublicdata (info) {
       info = req.read()
       if (info.method !== 'SPAKE2EE') return
-      res.removeListener('readable', onpublicdata)
+      req.removeListener('readable', onpublicdata)
 
       const response = state.generate(info.data, pwd)
 

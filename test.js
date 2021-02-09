@@ -17,16 +17,16 @@ const req = new Transform()
 const res = new Transform()
 const client = new SpakePeer.Client(username)
 
-server.get(username, req, res, (err, transport) => {
-  console.log('server connected!')
-  transport.recv.on('data', d => console.log('server received:', d))
-
-  setTimeout(() => transport.send.push(Buffer.from('hello.')), 1000)
-})
-
 client.connect(password, res, req, (err, transport) => {
   console.log('client connected!')
   transport.recv.on('data',  d => console.log('client received:', d.toString()))
 
   transport.send.push('hello server.')
+})
+
+server.get(username, req, res, (err, transport) => {
+  console.log('server connected!')
+  transport.recv.on('data', d => console.log('server received:', d))
+
+  setTimeout(() => transport.send.push(Buffer.from('hello.')), 1000)
 })
