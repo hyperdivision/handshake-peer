@@ -63,10 +63,8 @@ class SpakePeerServer extends Duplex {
 
     function ondata (data) {
       const plaintext = self.decrypter.decrypt(data)
-      self.push(plaintext)
 
       if (self.decrypter.decrypt.tag === secretstream.TAG_FINAL) {
-        self.send.push(null)
         self.push(null)
       }
     }
@@ -79,6 +77,13 @@ class SpakePeerServer extends Duplex {
   _write (data, cb) {
     const ciphertext = this.encrypter.encrypt(secretstream.TAG_MESSAGE, Buffer.from(data))
     this.send.write(ciphertext)
+
+    cb()
+  }
+
+  _final (cb) {
+    const finalMessage = this.encrypter.encrypt(secretstream.TAG_FINAL, Buffer.alloc(0))
+    this.send.end(finalMessage)
 
     cb()
   }
@@ -147,7 +152,6 @@ class SpakePeerClient extends Duplex {
       self.push(plaintext)
 
       if (self.decrypter.decrypt.tag === secretstream.TAG_FINAL) {
-        self.send.push(null)
         self.push(null)
       }
     }
@@ -160,6 +164,13 @@ class SpakePeerClient extends Duplex {
   _write (data, cb) {
     const ciphertext = this.encrypter.encrypt(secretstream.TAG_MESSAGE, Buffer.from(data))
     this.send.write(ciphertext)
+
+    cb()
+  }
+
+  _final (cb) {
+    const finalMessage = this.encrypter.encrypt(secretstream.TAG_FINAL, Buffer.alloc(0))
+    this.send.end(finalMessage)
 
     cb()
   }
