@@ -4,42 +4,34 @@ const Secretstream = require('secretstream-stream/stream')
 class SpakePeerServer {
   constructor (id, storage, opts = {}) {
     this.clients = storage
-    this.serverId = id
+    this.id = id
   }
 
   get (username, req, res, cb) {
     const self = this
 
     const clientData = this.clients.get(username)
-    const state = new Spake.ServerSide(this.serverId, clientData)
+    const state = new Spake.ServerSide(this.id, clientData)
 
     const publicData = state.init()
 
-    const msg = {
-      method: 'SPAKE2EE',
-      serverId: state.id,
-      data: publicData
-    }
-    
-    res.push(msg)
-    req.on('data', onresponse)
+    res.push(self.frameMsg(publicData))
+    req.on('readable', onresponse)
 
     function onresponse (info) {
-      if (info.method !== 'SPAKE2EE_CLIENT') return
-      req.removeListener('data', onresponse)
+      info = req.read()
+      if (info.method !== 'SPAKE2EE') return
+      req.removeListener('readable', onresponse)
 
       const response = state.respond(username, info.data)
-      const msg = {
-        method: 'SPAKE2EE',
-        serverId: state.id,
-        data: response
-      }
 
-      req.on('data', onfinal)
+      res.push(self.frameMsg(response))
+      req.on('readable', onfinal)
     }
 
     function onfinal (info) {
-      if (info.method !== 'SPAKE2EE_CLIENT') return
+      info = req.read()
+      if (info.method !== 'SPAKE2EE') return
       req.removeListener('data', onfinal)
 
       const sharedKeys = state.finalise(info.data)
@@ -47,15 +39,27 @@ class SpakePeerServer {
       const send = new Secretstream.Push(Buffer.from(sharedKeys.serverSk))
       const recv = new Secretstream.Pull(Buffer.from(sharedKeys.clientSk))
 
-      const transport = {}
-      transport.send = send.pipe(res)
-      transport.recv = req.pipe(recv)
+      send.on('data', d => res.push(d))
+      req.on('data', onheader)
 
-      cb(null, transport)
+      function onheader () {
+        req.removeListener('data', onheader)
+        req.on('data', d => recv.push(d))
+
+        cb(null, { send, recv })    
+      }
     }
 
     function onerror (err) {
       return cb(err)
+    }
+  }
+
+  frameMsg (data) {
+    return {
+      method: 'SPAKE2EE',
+      serverId: this.id,
+      data
     }
   }
 
@@ -78,52 +82,54 @@ class SpakePeerClient {
 
     const state = new Spake.ClientSide(this.username)
 
-    res.on('data', onpublicdata)
+    res.on('readable', onpublicdata)
 
     function onpublicdata (info) {
+      info = res.read()
       if (info.method !== 'SPAKE2EE') return
-      res.removeListener('data', onpublicdata)
+      res.removeListener('readable', onpublicdata)
 
       const response = state.generate(info.data, pwd)
 
-      const msg = {
-        method: 'SPAKE2EE_CLIENT',
-        data: response
-      }
-
-      req.push(msg)
-      res.on('data', onresponse)
+      req.push(self.frameMsg(response))
+      res.on('readable', onresponse)
     }
 
     function onresponse (info) {
+      info = res.read()
       if (info.method !== 'SPAKE2EE') return
-      res.removeListener('data', onresponse)
+      res.removeListener('readable', onresponse)
 
       const sharedKeys = new Spake.SpakeSharedKeys
 
       const response = state.finalise(sharedKeys, info.serverId, info.data)
+      req.push(self.frameMsg(response))
 
-      const msg = {
-        method: 'SPAKE2EE_CLIENT',
-        data: response
-      }
+      const send = new Secretstream.Push(Buffer.from(sharedKeys.clientSk))
+      const recv = new Secretstream.Pull(Buffer.from(sharedKeys.serverSk))
 
+      send.on('data', d => req.push(d))
       res.on('data', onheader)
 
-      function onheader (header) {
-        const send = new Secretstream.Push(Buffer.from(sharedKeys.clientSk))
-        const recv = new Secretstream.Pull(Buffer.from(sharedKeys.serverSk))
 
-        const transport = {}
-        transport.send = send.pipe(req)
-        transport.recv = res.pipe(recv)
+      function onheader () {
+        res.removeListener('data', onheader)
+        res.on('data', d => recv.push(d))
 
-        cb(null, transport)
+        cb(null, { send, recv })    
       }
     }
 
     function onerror (err) {
       return cb(err)
+    }
+  }
+
+  frameMsg (data) {
+    return {
+      method: 'SPAKE2EE',
+      username: this.username,
+      data
     }
   }
 }
