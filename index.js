@@ -49,6 +49,7 @@ class SpakePeerServer extends Duplex {
       const header = Buffer.alloc(secretstream.HEADERBYTES)
       self.encrypter = secretstream.encrypt(header, Buffer.from(self.keys.serverSk))
 
+      self.send.write(header)
       self.read.on('readable', onheader)
     }
 
@@ -56,8 +57,10 @@ class SpakePeerServer extends Duplex {
       const info = self.read.read()
       self.read.removeListener('data', onheader)
 
-      self.decrypter = secretstream.encrypt(info, Buffer.from(self.keys.clientSk))
+      self.decrypter = secretstream.decrypt(info, Buffer.from(self.keys.clientSk))
       self.read.on('data', d => self.push(d))
+
+      cb()
     }
 
     function onerror (err) {
@@ -66,7 +69,7 @@ class SpakePeerServer extends Duplex {
   }
 
   _write (data, cb) {
-    const ciphertext = this.encrypter.encrypt(data)
+    const ciphertext = this.encrypter.encrypt(secretstream.TAG_MESSAGE, Buffer.from(data))
     this.send.write(ciphertext)
 
     cb()
@@ -118,7 +121,8 @@ class SpakePeerClient extends Duplex {
       const header = Buffer.alloc(secretstream.HEADERBYTES)
       self.encrypter = secretstream.encrypt(header, Buffer.from(self.keys.clientSk))
 
-      self.send.push(response)
+      self.send.write(response)
+      self.send.write(header)
       self.read.on('readable', onheader)
     }
 
@@ -126,8 +130,10 @@ class SpakePeerClient extends Duplex {
       const info = self.read.read()
       self.read.removeListener('data', onheader)
 
-      self.decrypter = secretstream.encrypt(info, Buffer.from(self.keys.serverSk))
+      self.decrypter = secretstream.decrypt(info, Buffer.from(self.keys.serverSk))
       self.read.on('data', d => self.push(d))
+
+      cb()
     }
 
     function onerror (err) {
@@ -136,7 +142,7 @@ class SpakePeerClient extends Duplex {
   }
 
   _write (data, cb) {
-    const ciphertext = this.encrypter.encrypt(data)
+    const ciphertext = this.encrypter.encrypt(secretstream.TAG_MESSAGE, Buffer.from(data))
     this.send.write(ciphertext)
 
     cb()
