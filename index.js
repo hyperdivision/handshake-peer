@@ -15,22 +15,23 @@ class SpakePeerServer {
 
     const publicData = state.init()
 
-    res.push(self.frameMsg(publicData))
+    res.write(self.frameMsg(publicData))
     req.on('readable', onresponse)
 
     function onresponse (info) {
-      info = req.read()
+      info = res.read()
+      console.log(info)
       if (info.method !== 'SPAKE2EE') return
       req.removeListener('readable', onresponse)
 
       const response = state.respond(username, info.data)
 
-      res.push(self.frameMsg(response))
+      res.write(self.frameMsg(response))
       req.on('readable', onfinal)
     }
 
     function onfinal (info) {
-      info = req.read()
+      info = res.read()
       if (info.method !== 'SPAKE2EE') return
       req.removeListener('data', onfinal)
 
@@ -82,39 +83,38 @@ class SpakePeerClient {
 
     const state = new Spake.ClientSide(this.username)
 
-    res.on('readable', onpublicdata)
+    req.on('readable', onpublicdata)
 
     function onpublicdata (info) {
-      info = res.read()
+      info = req.read()
       if (info.method !== 'SPAKE2EE') return
       res.removeListener('readable', onpublicdata)
 
       const response = state.generate(info.data, pwd)
 
-      req.push(self.frameMsg(response))
-      res.on('readable', onresponse)
+      res.write(self.frameMsg(response))
+      req.on('readable', onresponse)
     }
 
     function onresponse (info) {
-      info = res.read()
+      info = req.read()
       if (info.method !== 'SPAKE2EE') return
-      res.removeListener('readable', onresponse)
+      req.removeListener('readable', onresponse)
 
       const sharedKeys = new Spake.SpakeSharedKeys
 
       const response = state.finalise(sharedKeys, info.serverId, info.data)
-      req.push(self.frameMsg(response))
+      res.push(self.frameMsg(response))
 
       const send = new Secretstream.Push(Buffer.from(sharedKeys.clientSk))
       const recv = new Secretstream.Pull(Buffer.from(sharedKeys.serverSk))
 
-      send.on('data', d => req.push(d))
-      res.on('data', onheader)
-
+      send.on('data', d => res.push(d))
+      req.on('data', onheader)
 
       function onheader () {
-        res.removeListener('data', onheader)
-        res.on('data', d => recv.push(d))
+        req.removeListener('data', onheader)
+        req.on('data', d => recv.push(d))
 
         cb(null, { send, recv })    
       }
