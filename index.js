@@ -9,8 +9,8 @@ class SpakePeerServer {
     this.read = new Decode()
     this.send = new Encode()
 
-    res.pipe(this.read)
-    this.send.pipe(req)
+    req.pipe(this.read)
+    this.send.pipe(res)
   }
 
   get (username, cb) {
@@ -79,8 +79,10 @@ class SpakePeerClient {
     this.read = new Decode()
     this.send = new Encode()
 
-    res.pipe(this.read)
-    this.send.pipe(req)
+    req.pipe(this.read)
+    this.send.pipe(res)
+
+    this.read.on('data', console.log)
   }
 
   connect (pwd, cb) {
@@ -91,6 +93,7 @@ class SpakePeerClient {
     self.read.on('readable', onpublicdata)
 
     function onpublicdata (info) {
+      console.log('hello')
       info = self.read.read()
       self.read.removeListener('readable', onpublicdata)
 
