@@ -6,8 +6,11 @@ class SpakePeerServer {
   constructor (id, storage, req, res, opts = {}) {
     this.clients = storage
     this.id = id
-    this.read = req.pipe(new Decode())
-    this.send = new Encode().pipe(req)
+    this.read = new Decode()
+    this.send = new Encode()
+
+    res.pipe(this.read)
+    this.send.pipe(req)
   }
 
   get (username, cb) {
@@ -23,7 +26,7 @@ class SpakePeerServer {
 
     function onresponse (info) {
       info = self.read.read()
-      if (info.method !== 'SPAKE2EE') return
+      console.log(info)
       self.read.removeListener('readable', onresponse)
 
       const response = state.respond(username, info.data)
@@ -34,7 +37,7 @@ class SpakePeerServer {
 
     function onfinal (info) {
       info = self.read.read()
-      if (info.method !== 'SPAKE2EE') return
+      console.log(info)
       self.read.removeListener('data', onfinal)
 
       const sharedKeys = state.finalise(info.data)
@@ -73,8 +76,11 @@ class SpakePeerServer {
 class SpakePeerClient {
   constructor (username, req, res, opts = {}) {
     this.username = username
-    this.read = req.pipe(new Decode())
-    this.send = new Encode().pipe(res)
+    this.read = new Decode()
+    this.send = new Encode()
+
+    res.pipe(this.read)
+    this.send.pipe(req)
   }
 
   connect (pwd, cb) {
@@ -86,7 +92,6 @@ class SpakePeerClient {
 
     function onpublicdata (info) {
       info = self.read.read()
-      if (info.method !== 'SPAKE2EE') return
       self.read.removeListener('readable', onpublicdata)
 
       const response = state.generate(info.data, pwd)
@@ -97,7 +102,6 @@ class SpakePeerClient {
 
     function onresponse (info) {
       info = self.read.read()
-      if (info.method !== 'SPAKE2EE') return
       self.read.removeListener('readable', onresponse)
 
       const sharedKeys = new Spake.SpakeSharedKeys
