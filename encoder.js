@@ -6,9 +6,8 @@ class Encode extends Transform {
   }
 
   _transform (data, cb) {
-    console.log('data', data)
     const frame = Buffer.alloc(2)
-    const view = new DataView(frame.buffer)
+    const view = new DataView(frame.buffer, frame.byteOffset)
     view.setUint16(0, data.length, true)
     cb(null, Buffer.concat([frame, data]))
   }
@@ -37,7 +36,7 @@ class Decode extends Transform {
 
       if (this._readingFrame) {
         this._readingFrame = false
-        const view = new DataView(data.buffer)
+        const view = new DataView(data.buffer, data.byteOffset)
         this._missing = view.getUint16(0, true)
         data = data.slice(2)
         continue

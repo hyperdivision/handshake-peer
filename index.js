@@ -81,8 +81,6 @@ class SpakePeerClient {
 
     req.pipe(this.read)
     this.send.pipe(res)
-
-    this.read.on('data', console.log)
   }
 
   connect (pwd, cb) {
@@ -93,7 +91,6 @@ class SpakePeerClient {
     self.read.on('readable', onpublicdata)
 
     function onpublicdata (info) {
-      console.log('hello')
       info = self.read.read()
       self.read.removeListener('readable', onpublicdata)
 
