@@ -13,22 +13,8 @@ const registrationInfo = spake.ClientSide.register(password)
 const serverReq = new Transform()
 const serverRes = new Transform()
 
-const server = new SpakePeer.Server(serverId, storage, serverReq, serverRes)
-server.register(username, registrationInfo)
+const server = new SpakePeer.Server(serverId, username, registrationInfo, serverReq, serverRes)
+const client = new SpakePeer.Client(username, password, serverId, serverRes, serverReq)
 
-const client = new SpakePeer.Client(username, serverRes, serverReq)
-
-client.connect(password, serverId, (err, transport) => {
-  console.log('client connected!')
-  transport.recv.on('data',  d => console.log('client received:', d.toString()))
-
-  transport.send.push('hello server.')
-  transport.send.push('hello server.')
-})
-
-server.get(username, (err, transport) => {
-  console.log('server connected!')
-  transport.recv.on('data', d => console.log('server received:', d))
-
-  setTimeout(() => transport.send.push(Buffer.from('hello.')), 1000)
-})
+client.write('hello')
+server.on('data', d => console.log('data', d))
