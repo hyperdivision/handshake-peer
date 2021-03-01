@@ -1,5 +1,5 @@
 {
-  "name": "spake2-peer",
+  "name": "handshake-peer",
   "version": "0.0.0",
   "description": "Connect to a peer using SPAKE2-EE key agreement protocol",
   "main": "index.js",
@@ -8,7 +8,13 @@
   },
   "author": "Christophe Diederichs",
   "license": "ISC",
+  "homepage": "https://github.com/hyperdivision/handshake-peer#readme",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/hyperdivision/handshake-peer.git"
+  },
   "dependencies": {
+    "bint8array": "^1.1.1",
     "nanoassert": "^2.0.0",
     "pump": "^3.0.0",
     "secretstream-stream": "^2.0.0",

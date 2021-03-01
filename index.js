@@ -1,5 +1,6 @@
 const assert = require('nanoassert')
 const secretstream = require('secretstream-stream')
+const bint = require('bint8array')
 const { Duplex } = require('streamx')
 const pump = require('pump')
 
@@ -22,8 +23,8 @@ module.exports = class HandshakePeer extends Duplex {
     this.handshake = opts.handshake
     this.handshakeState = null
 
-    pump(transport.req, this.read)
-    pump(this.send, transport.res)
+    pump(transport, this.read)
+    pump(this.send, transport)
   }
 
   _open (cb) {
@@ -52,7 +53,7 @@ module.exports = class HandshakePeer extends Duplex {
 
         // proceed to next step, if there is one
         if (!self.keys.empty() && self.encrypter == null) {
-          const header = Buffer.alloc(secretstream.HEADERBYTES)
+          const header = new Uint8Array(secretstream.HEADERBYTES)
           self.encrypter = secretstream.encrypt(header, self.keys.local)
           self.send.write(header)
         }
@@ -74,7 +75,7 @@ module.exports = class HandshakePeer extends Duplex {
     function onheader (header) {
       self.read.pause()
 
-      self.decrypter = secretstream.decrypt(header, Buffer.from(self.keys.remote))
+      self.decrypter = secretstream.decrypt(header, self.keys.remote)
 
       self.read.on('data', ondata)
       self.read.resume()
@@ -91,21 +92,21 @@ module.exports = class HandshakePeer extends Duplex {
         return cb(e)
       }
 
-      if (self.decrypter.decrypt.tag.equals(secretstream.TAG_FINAL)) {
+      if (!bint.compare(self.decrypter.decrypt.tag, secretstream.TAG_FINAL)) {
         self.push(null)
       }
     }
   }
 
   _write (data, cb) {
-    const ciphertext = this.encrypter.encrypt(secretstream.TAG_MESSAGE, Buffer.from(data))
+    const ciphertext = this.encrypter.encrypt(secretstream.TAG_MESSAGE, data)
     this.send.write(ciphertext)
 
     cb()
   }
 
   _final (cb) {
-    const finalMessage = this.encrypter.encrypt(secretstream.TAG_FINAL, Buffer.alloc(0))
+    const finalMessage = this.encrypter.encrypt(secretstream.TAG_FINAL, new Uint8Array(0))
     this.send.end(finalMessage)
 
     cb()
@@ -122,8 +123,8 @@ class Keys {
     this._local = null
   }
 
-  get local () { return Buffer.from(this._local) }
-  get remote () { return Buffer.from(this._remote) }
+  get local () { return this._local }
+  get remote () { return this._remote }
 
   set local (buf) {
     assert(buf instanceof Uint8Array, 'key should be a Buffer or Uint8Array')

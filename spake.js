@@ -4,7 +4,7 @@ const HandshakePeer = require('./')
 const handshake = {}
 handshake.Server = [
   function (self) {
-    self.handshakeState = new Spake.ServerSide(self.localInfo.id, self.remoteInfo.data)
+    self.handshakeState = new Spake.ServerSide(self.localInfo.id, new Uint8Array(self.remoteInfo.data))
     const publicData = self.handshakeState.init()
 
     return publicData
@@ -30,7 +30,7 @@ handshake.Client = [
   },
   function (data, self) {
     const keys = new Spake.SpakeSharedKeys()
-    const response = self.handshakeState.finalise(keys, self.remoteInfo.serverId, data)
+    const response = self.handshakeState.finalise(keys, self.remoteInfo.id, data)
 
     self.keys.local = keys.clientSk
     self.keys.remote = keys.serverSk
@@ -55,6 +55,6 @@ class SpakePeerServer extends HandshakePeer {
 
 module.exports = {
   handshake,
-  SpakePeerServer,
-  SpakePeerClient
+  Server: SpakePeerServer,
+  Client: SpakePeerClient
 }

@@ -25,7 +25,7 @@ const serverTransport = {
   req: serverReq
 }
 
-const server = new SpakePeerServer({ id: serverId }, clientInfo, serverTransport)
+const server = new SpakePeerServer({ id: serverId }, { data: clientInfo.data }, serverTransport)
 const client = new SpakePeerClient({ username, password }, { serverId }, clientTransport)
 
 server.on('data', d => console.log('server received:', d.toString()))

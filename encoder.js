@@ -1,4 +1,5 @@
 const { Transform } = require('streamx')
+const bint = require('bint8array')
 
 class Encode extends Transform {
   constructor () {
@@ -6,10 +7,10 @@ class Encode extends Transform {
   }
 
   _transform (data, cb) {
-    const frame = Buffer.alloc(2)
+    const frame = new Uint8Array(2)
     const view = new DataView(frame.buffer, frame.byteOffset)
     view.setUint16(0, data.length, true)
-    cb(null, Buffer.concat([frame, data]))
+    cb(null, bint.concat([frame, data]))
   }
 }
 
@@ -25,7 +26,7 @@ class Decode extends Transform {
   _transform (data, cb) {
     while (data.byteLength > 0) {
       if (this._buffered) {
-        data = Buffer.concat([this._buffered, data])
+        data = bint.concat([this._buffered, data])
         this._buffered = null
       }
 
