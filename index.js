@@ -13,7 +13,7 @@ module.exports = class HandshakePeer extends Duplex {
     this.localInfo = localInfo
     this.remoteInfo = remoteInfo
 
-    this.read = new Decode()
+    this.recv = new Decode()
     this.send = new Encode()
 
     this.keys = new Keys()
@@ -23,7 +23,7 @@ module.exports = class HandshakePeer extends Duplex {
     this.handshake = opts.handshake
     this.handshakeState = null
 
-    pump(transport, this.read)
+    pump(transport, this.recv)
     pump(this.send, transport)
   }
 
@@ -36,11 +36,11 @@ module.exports = class HandshakePeer extends Duplex {
 
     if (initData) this.send.write(initData)
 
-    this.read.once('data', doHandshake(handshake[step++]))
+    this.recv.once('data', doHandshake(handshake[step++]))
 
     function doHandshake (fn) {
       return (data) => {
-        self.read.pause()
+        self.recv.pause()
 
         let ret
         try {
@@ -60,7 +60,7 @@ module.exports = class HandshakePeer extends Duplex {
 
         // proceed to next step, if there is one
         if (step !== handshake.length) {
-          self.read.once('data', doHandshake(handshake[step++]))
+          self.recv.once('data', doHandshake(handshake[step++]))
           return
         }
 
@@ -68,17 +68,17 @@ module.exports = class HandshakePeer extends Duplex {
         self.handshakeState._sanitize()
         self.handshakeState = null
 
-        self.read.once('data', onheader)
+        self.recv.once('data', onheader)
       }
     }
 
     function onheader (header) {
-      self.read.pause()
+      self.recv.pause()
 
       self.decrypter = secretstream.decrypt(header, self.keys.remote)
 
-      self.read.on('data', ondata)
-      self.read.resume()
+      self.recv.on('data', ondata)
+      self.recv.resume()
 
       cb()
     }
