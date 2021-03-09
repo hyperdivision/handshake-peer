@@ -1,6 +1,6 @@
 {
   "name": "handshake-peer",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Connect to a peer using SPAKE2-EE key agreement protocol",
   "main": "index.js",
   "scripts": {
@@ -17,8 +17,8 @@
     "bint8array": "^1.1.1",
     "nanoassert": "^2.0.0",
     "pump": "^3.0.0",
-    "secretstream-stream": "^2.0.0",
-    "spake2-ee": "git+ssh://git@github.com/hyperdivision/spake2-ee.git",
+    "secretstream-stream": "git+ssh://git@github.com/emilbayes/secretstream-stream.git",
+    "spake2-ee": "^0.1.0",
     "streamx": "^2.10.1"
   }
 }
