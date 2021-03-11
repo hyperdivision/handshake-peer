@@ -23,8 +23,14 @@ module.exports = class HandshakePeer extends Duplex {
     this.handshake = opts.handshake
     this.handshakeState = null
 
-    pump(transport, this.recv)
-    pump(this.send, transport)
+    pump(transport, this.recv, (err) => {
+      if (err) throw err
+      console.log('stream ended.')
+    })
+    pump(this.send, transport, (err) => {
+      if (err) throw err
+      console.log('stream ended.')
+    })
   }
 
   _open (cb) {
@@ -79,6 +85,7 @@ module.exports = class HandshakePeer extends Duplex {
 
       self.recv.on('data', ondata)
       self.recv.resume()
+      self.emit('handshake')
 
       cb()
     }
