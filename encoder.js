@@ -72,20 +72,12 @@ class Decode extends Transform {
       this._readingFrame = true
 
       // handle error
-      if (err !== 0) return cb(bint.toString(message))
+      if (err !== 0) return cb(new Error(bint.toString(message)))
 
       this.push(message)
     }
 
     cb(null)
-
-    function readFrame (view) {
-      const error = view.getUint8(0)
-
-      if (error === 0xff) {
-
-      }
-    }
   }
 }
 
