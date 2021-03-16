@@ -6,8 +6,9 @@ class Encode extends Transform {
     super()
   }
 
-  error (message) {
-    this.push(this.format(message, true))
+  error (msg) {
+    if (typeof msg === 'string') return this.error(bint.fromString(msg))
+    this.push(this.format(msg, true))
   }
 
   _transform (data, cb) {
@@ -15,7 +16,6 @@ class Encode extends Transform {
   }
 
   _destroy (cb) {
-    console.log('destroying')
     cb()
   }
 
@@ -41,7 +41,7 @@ class Decode extends Transform {
   }
 
   _transform (data, cb) {
-    let error = 0
+    let err = 0
 
     while (data.byteLength > 0) {
       if (this._buffered) {
@@ -58,7 +58,7 @@ class Decode extends Transform {
         this._readingFrame = false
         const view = new DataView(data.buffer, data.byteOffset)
 
-        err &= view.getUint8(0)
+        err |= view.getUint8(0)
 
         this._missing = view.getUint16(1, true)
         data = data.slice(3)
@@ -72,7 +72,7 @@ class Decode extends Transform {
       this._readingFrame = true
 
       // handle error
-      if (err !== 0) return cb(message)
+      if (err !== 0) return cb(bint.toString(message))
 
       this.push(message)
     }

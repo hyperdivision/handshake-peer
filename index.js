@@ -31,7 +31,6 @@ module.exports = class HandshakePeer extends Duplex {
     const self = this
     const handshake = this.handshake
 
-    console.log('opening')
     let step = 0
     const initData = handshake[step++](self)
 
@@ -51,10 +50,9 @@ module.exports = class HandshakePeer extends Duplex {
         let ret
         try {
           ret = fn(data, self)
-          console.log(ret, step, 're')
           if (ret) self.send.write(ret)
         } catch (e) {
-          self.send.error(e)
+          self.send.error(e.message)
           return cb(e)
         }
 
@@ -86,7 +84,6 @@ module.exports = class HandshakePeer extends Duplex {
 
       self.recv.on('data', ondata)
       self.recv.resume()
-      self.emit('handshake')
 
       cb()
     }

@@ -14,7 +14,7 @@
     "url": "git://github.com/hyperdivision/handshake-peer.git"
   },
   "dependencies": {
-    "bint8array": "^1.1.1",
+    "bint8array": "^1.1.2",
     "nanoassert": "^2.0.0",
     "pump": "^3.0.0",
     "secretstream-stream": "git+ssh://git@github.com/emilbayes/secretstream-stream.git",
