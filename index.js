@@ -39,7 +39,7 @@ module.exports = class HandshakePeer extends Duplex {
     if (initData) this.send.write(initData)
 
     this.recv.once('data', doHandshake(handshake[step++]))
-    
+
     pump(this.send, this.transport, this.recv, err => {
       if (this._destroyed) return
       cb(err)
