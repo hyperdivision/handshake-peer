@@ -15,6 +15,7 @@ module.exports = class HandshakePeer extends Duplex {
 
     this.recv = new Decode()
     this.send = new Encode()
+    this.transport = transport
 
     this.keys = new Keys()
     this.encrypter = null
@@ -23,11 +24,12 @@ module.exports = class HandshakePeer extends Duplex {
     this.handshake = opts.handshake
     this.handshakeState = null
 
-    pump(transport, this.recv)
-    pump(this.send, transport)
+    this._destroyed = false
   }
 
   _open (cb) {
+    cb = once(cb)
+
     const self = this
     const handshake = this.handshake
 
@@ -38,6 +40,11 @@ module.exports = class HandshakePeer extends Duplex {
 
     this.recv.once('data', doHandshake(handshake[step++]))
 
+    pump(this.send, this.transport, this.recv, err => {
+      if (this._destroyed) return
+      cb(err)
+    })
+
     function doHandshake (fn) {
       return (data) => {
         self.recv.pause()
@@ -47,7 +54,7 @@ module.exports = class HandshakePeer extends Duplex {
           ret = fn(data, self)
           if (ret) self.send.write(ret)
         } catch (e) {
-          self.send.end(e)
+          self.send.error(e.message)
           return cb(e)
         }
 
@@ -113,7 +120,7 @@ module.exports = class HandshakePeer extends Duplex {
   }
 
   _predestroy () {
-    this.send.end(null)
+    this._destroyed = true
   }
 }
 
@@ -142,5 +149,14 @@ class Keys {
 
   empty () {
     return this._local == null || this._remote == null
+  }
+}
+
+function once (fn) {
+  let called = false
+  return (err) => {
+    if (called) return
+    called = true
+    return fn(err)
   }
 }
