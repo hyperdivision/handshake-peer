@@ -28,6 +28,8 @@ module.exports = class HandshakePeer extends Duplex {
   }
 
   _open (cb) {
+    cb = once(cb)
+
     const self = this
     const handshake = this.handshake
 
@@ -147,5 +149,14 @@ class Keys {
 
   empty () {
     return this._local == null || this._remote == null
+  }
+}
+
+function once (fn) {
+  let called = false
+  return (err) => {
+    if (called) return
+    called = true
+    return fn(err)
   }
 }
