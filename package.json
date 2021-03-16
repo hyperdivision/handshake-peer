@@ -1,6 +1,6 @@
 {
   "name": "handshake-peer",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Connect to a peer using SPAKE2-EE key agreement protocol",
   "main": "index.js",
   "scripts": {
