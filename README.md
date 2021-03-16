@@ -9,7 +9,7 @@ Handshake protocol-agnostic end-to-end encrypted, secure channels.
 const transport = { req, res }
 
 // instantiate client
-const client = new Handshakepeer({ localId }, { remoeId }, transport, {
+const client = new HandshakePeer({ localId }, { remoeId }, transport, {
   handshake: [
     function (self) {
       // init logic
@@ -29,6 +29,8 @@ const server = new HandshakePeer( ... )
 
 client.write('hello, server!')
 // [server] >hello, server!
+
+client.on('error', console.error)
 ```
 
 ## API
