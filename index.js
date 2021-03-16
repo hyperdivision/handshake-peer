@@ -15,6 +15,7 @@ module.exports = class HandshakePeer extends Duplex {
 
     this.recv = new Decode()
     this.send = new Encode()
+    this.transport = transport
 
     this.keys = new Keys()
     this.encrypter = null
@@ -22,22 +23,25 @@ module.exports = class HandshakePeer extends Duplex {
 
     this.handshake = opts.handshake
     this.handshakeState = null
+
+    this._destroyed = false
   }
 
   _open (cb) {
     const self = this
     const handshake = this.handshake
 
+    console.log('opening')
     let step = 0
     const initData = handshake[step++](self)
 
     if (initData) this.send.write(initData)
 
     this.recv.once('data', doHandshake(handshake[step++]))
-
-    pump(this.send, transport, this.recv, err => {
-      if (err) self.destroy(err)
-      console.log('stream ended.')
+    
+    pump(this.send, this.transport, this.recv, err => {
+      if (this._destroyed) return
+      cb(err)
     })
 
     function doHandshake (fn) {
@@ -47,9 +51,10 @@ module.exports = class HandshakePeer extends Duplex {
         let ret
         try {
           ret = fn(data, self)
+          console.log(ret, step, 're')
           if (ret) self.send.write(ret)
         } catch (e) {
-          self.send.end(e)
+          self.send.error(e)
           return cb(e)
         }
 
@@ -116,7 +121,7 @@ module.exports = class HandshakePeer extends Duplex {
   }
 
   _predestroy () {
-    this.send.end(null)
+    this._destroyed = true
   }
 }
 

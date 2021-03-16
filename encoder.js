@@ -6,11 +6,28 @@ class Encode extends Transform {
     super()
   }
 
+  error (message) {
+    this.push(this.format(message, true))
+  }
+
   _transform (data, cb) {
-    const frame = new Uint8Array(2)
+    cb(null, this.format(data))
+  }
+
+  _destroy (cb) {
+    console.log('destroying')
+    cb()
+  }
+
+  format (data, error = false) {
+    const frame = new Uint8Array(3)
     const view = new DataView(frame.buffer, frame.byteOffset)
-    view.setUint16(0, data.length, true)
-    cb(null, bint.concat([frame, data]))
+
+    // error flag
+    if (error) view.setUint8(0, 0xff)
+
+    view.setUint16(1, data.length, true)
+    return bint.concat([frame, data])
   }
 }
 
@@ -19,11 +36,13 @@ class Decode extends Transform {
     super()
 
     this._readingFrame = true
-    this._missing = 2 // 2 bytes
+    this._missing = 3 // 2 bytes
     this._buffered = null
   }
 
   _transform (data, cb) {
+    let error = 0
+
     while (data.byteLength > 0) {
       if (this._buffered) {
         data = bint.concat([this._buffered, data])
@@ -38,21 +57,35 @@ class Decode extends Transform {
       if (this._readingFrame) {
         this._readingFrame = false
         const view = new DataView(data.buffer, data.byteOffset)
-        this._missing = view.getUint16(0, true)
-        data = data.slice(2)
+
+        err &= view.getUint8(0)
+
+        this._missing = view.getUint16(1, true)
+        data = data.slice(3)
         continue
       }
 
       const message = data.slice(0, this._missing)
       data = data.slice(this._missing)
 
-      this._missing = 2
+      this._missing = 3
       this._readingFrame = true
+
+      // handle error
+      if (err !== 0) return cb(message)
 
       this.push(message)
     }
 
     cb(null)
+
+    function readFrame (view) {
+      const error = view.getUint8(0)
+
+      if (error === 0xff) {
+
+      }
+    }
   }
 }
 
